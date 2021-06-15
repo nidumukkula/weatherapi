@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd  http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    <http:listener-config name="weatherapi-httpListenerConfig" tracking:enable-default-events="false">
+        <http:listener-connection host="0.0.0.0" port="8082" protocol="HTTPS">
+			<tls:context >
+				<tls:key-store type="jks" path="https_keystore.jks" keyPassword="${secure::keystore.password}" password="${secure::keystore.password}"/>
+			</tls:context>
+		</http:listener-connection>
+    </http:listener-config>
+    <apikit:config name="weatherapi-config" api="weatherapi.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="weatherapi-main">
+        <http:listener config-ref="weatherapi-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="weatherapi-config" />
+        <error-handler ref="apikitError_Handler" />
+    </flow>
+    <flow name="weatherapi-console">
+        <http:listener config-ref="weatherapi-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="weatherapi-config" />
+        <error-handler ref="apikitError_Handler" />
+    </flow>
+    <flow name="get:\weatherinfo\apiheartbeat:weatherapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="daa1a0b6-c954-4317-a93d-a32d44482a56" message="Recived Request for heartbeat check" />
+        <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" doc:id="1de78274-7e36-47dc-a5b4-fab2668e449c">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  APIName: "weatherapi",
+  status: "Active"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="get:\weatherinfo\inspect:weatherapi-config">
+        <logger level="INFO" message="Received Request for get:\weatherinfo\inspect:weatherapi-config" />
+        <flow-ref doc:name="inspectObjectStoreFlow" doc:id="c3ed84eb-c508-48bc-9dc3-fafdd58f5e29" name="inspectObjectStoreSubFlow" />
+    </flow>
+    <flow name="get:\weatherinfo\syncdrive:weatherapi-config">
+        <logger level="INFO" message="Received Request for get:\weatherinfo\syncdrive:weatherapi-config" />
+        <flow-ref doc:name="synchrozieLocationDatafromDriveSubFlow" doc:id="85306102-78da-4c46-b338-57ff5ab2f1e1" name="synchrozieLocationDatafromDriveSubFlow" />
+    </flow>
+    <flow name="get:\weatherinfo:weatherapi-config">
+        <logger level="INFO" doc:name="Logger" doc:id="c1c7343c-a7fd-4fbe-8adc-d082d75b435a" message="Received Request for get:\weatherinfo:weatherapi-config" />
+        <flow-ref doc:name="coreSubFlow" doc:id="162a446f-8b55-48cf-890d-c6e72f15cfc5" name="coreSubFlow" />
+    </flow>
+</mule>

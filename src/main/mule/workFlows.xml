@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth"
+	xmlns:google-drive="http://www.mulesoft.org/schema/mule/google-drive"
+	xmlns:google-sheets="http://www.mulesoft.org/schema/mule/google-sheets" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/google-sheets http://www.mulesoft.org/schema/mule/google-sheets/current/mule-google-sheets.xsd
+http://www.mulesoft.org/schema/mule/google-drive http://www.mulesoft.org/schema/mule/google-drive/current/mule-google-drive.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd">
+
+	<sub-flow name="geoLocateIpSubFlow" doc:id="36e4151b-5fbc-4367-8df1-56f75c315033" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="9489aad8-2be2-4477-a8af-0c61b8693a5d" message="Start of flow- geoLocateIpSubFlow"/>
+		<http:request method="GET" doc:name="Get zipcode of an Ip Address " doc:id="15de1bc2-5c3b-47b3-a60c-dd045ebade9d" config-ref="HTTP_Request_configuration_Ip" path="/json/{ip}" >
+			<http:uri-params ><![CDATA[#[{ 'ip' : vars.ipaddress}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="b9f7a20b-ba68-4112-922f-689a905909df" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="zipcode" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	zipcode: payload.zip
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log End Flow" doc:id="0005ee52-b0a2-4345-9714-532e84b4b92b" message="end of flow- geoLocateIpSubFlow ; zipcode resolved -#[payload.zipcode]"/>
+	</sub-flow>
+	<sub-flow name="getWeatherForZipcodeSubFlow" doc:id="5567eead-d499-46e3-8f2f-5ceedd031d04" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="c0f22539-468e-41fd-8bdf-00ef29455117" message="Start of flow- getWeatherForZipcodeSubFlow "/>
+		<http:request method="GET" doc:name="get weather for give zipcode" doc:id="84cb571b-45b5-4375-aac8-2297e461429a" config-ref="HTTP_Request_configuration_WeatherAPI" path="/v1/forecast.json">
+			<http:query-params><![CDATA[#[output application/java
+---
+{
+	alerts : 'no',
+	q : (vars.zipcode.zipcode),
+	aqi : 'no',
+	days : '1',
+	key : p('secure::weather.apikey')
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="ad3929be-6122-4c63-9e3f-f25a8167c583">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+
+'High temperature' :payload.forecast.forecastday.day[0].maxtemp_c,
+'Low temperature' :payload.forecast.forecastday.day[0].mintemp_c,
+'Current temperature':payload.current.temp_c,
+'Current outlook' :payload.current.condition.text
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log End Flow" doc:id="1ba6c5ae-bbda-4f58-a1e3-aec57ad47626" message="end of flow- getWeatherForZipcodeSubFlow "/>
+	</sub-flow>
+	<!-- <flow name="synchrozieLocationDatafromDrive" doc:id="8b4366ec-5519-4814-8806-b0e6744ffd61" > 
+		<http:listener doc:name="Listener" doc:id="3850ecd2-5ea5-4e6c-b158-e9f208ddc55f" config-ref="HTTP_Listener_config" path="/googledrivetest"/>
+		<google-drive:get-files doc:name="get list of files from drive" doc:id="0062c6b6-def2-4bd4-9755-4c74ec698095" config-ref="Google_Drive_Connector_Config"/>
+		<ee:transform doc:name="get fileId of Locationlist File" doc:id="aadbc43a-bb18-41b4-aeb8-9971897098f1" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="fileId" ><![CDATA[%dw 2.0
+output application/json
+-&#45;&#45;
+if(payload.name contains  "Mulesoft Assignment - Location CSV file.csv")
+(payload filter ((item, index) ->item.name=='Mulesoft Assignment - Location CSV file.csv' )).id[0] 
+else
+'file not present']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<google-drive:get-files-by-file-id doc:name="get file by fileId" doc:id="9005cf49-d4d3-447c-b1b9-ea81bbcf0f30" config-ref="Google_Drive_Connector_Config" fileId="#[vars.fileId]" alt="JSON">
+			<google-drive:custom-query-params><![CDATA[#[output application/java
+-&#45;&#45;
+{
+	alt : 'media'
+}]]]></google-drive:custom-query-params>
+		</google-drive:get-files-by-file-id>
+		<ee:transform doc:name="Transform Message" doc:id="f6c42b59-85ee-402c-ab90-482ffe659915">
+			<ee:message>
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+-&#45;&#45;
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="Locationdata" ><![CDATA[%dw 2.0
+output application/json
+
+-&#45;&#45;
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="cc3796e5-d306-4ba2-8d5f-f348165127d1" >
+			<http:request method="GET" doc:name="get all the zipcode of state" doc:id="ebe84c49-7fdf-4c84-af18-318a012e701c" config-ref="HTTP_Request_Configuration_Zipcodes" path="ZipCodesAPI.svc/1.0/GetAllZipCodes" target="zipcodeList">
+				<http:query-params ><![CDATA[#[output application/java
+-&#45;&#45;
+{
+	country : p('zipcode.country'),
+	state : 'NJ',
+	key : p('zipcode.apikey')
+}]]]></http:query-params>
+			</http:request>
+			<ee:transform doc:name="map zipcode list to state" doc:id="26032b9c-c697-4747-bdd6-efb98075b2f7" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="Locationdata" ><![CDATA[%dw 2.0
+output application/json
+-&#45;&#45;
+
+vars.Locationdata  map ((item, index) ->(item  update {
+          case ZipCode at ."Zip Code" ->   vars.zipcodeList
+  }) )  ]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<os:store doc:name="Store LocationList in objectstore" doc:id="20c07e65-8c36-4d54-af55-7fd4ae066487" objectStore="LocationData_Object_Store" key="LocationData">
+			<os:value ><![CDATA[#[vars.Locationdata]]]></os:value>
+		</os:store>
+	</flow> -->
+	<sub-flow name="checkValidZipcodeSubFlow" doc:id="1bf2383c-0699-4443-b2f9-654b6f4b9660" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="ee8d27ec-3ad8-4193-a263-18ef3a5a3add" message="Log Start Flow - checkValidZipcodeSubFlow"/>
+		<os:retrieve doc:name="Retrievezipcodelist" doc:id="41837b6e-e46e-4320-8050-45db33c79a53" key="LocationData" objectStore="LocationData_Object_Store" />
+		<logger level="INFO" doc:name="Logger" doc:id="d2a5120b-9d8a-429f-a0ae-d6faa49fdd33" message="#[(vars.zipcode).zipcode]"/>
+		<ee:transform doc:name="Transform Message" doc:id="a8b3fd94-3624-468d-9661-2bf9ccfaaaab">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+import * from dw::Runtime
+fun isValid():Boolean=(flatten(payload.'Zip Code')) contains (vars.zipcode.zipcode)
+---
+isValid()]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="2583ae2c-9110-410f-9195-cd5d1ebb6da9">
+				<when expression="#[payload==false]">
+					<raise-error doc:name="Raise error" doc:id="51c4a0ab-211e-4b7c-943a-bbac4e6271d9" type="INVALIDZIPCODE:ERROR" description="Invalid or Unmapped zipcode " />
+				</when>
+				<otherwise>
+					<logger level="INFO" doc:name="Log End Flow" doc:id="944e3b13-3605-4408-9b85-8765e5894758" message="zipcode is valid ; end of flow -checkValidZipcodeSubFlow" />
+				</otherwise>
+			</choice>
+	</sub-flow>
+	
+</mule>

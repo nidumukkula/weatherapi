@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<types:mule xmlns:types="http://www.mulesoft.org/schema/mule/types">
+  <types:catalog>
+    <types:type name="sampleslocationrecord" format="json">
+      <types:shape format="weave" example="examples/samplelocationrecord.json"><![CDATA[%dw 2.0
+
+type sampleslocationrecord = {|
+  Street: String, 
+  City: String, 
+  State: String, 
+  "Zip Code": String
+|} {"example": "{\\\"Street\\\":\\\"225 S Olive St\\\",\\\"City\\\":\\\"Los Angeles\\\",\\\"State\\\":\\\"California\\\",\\\"Zip Code\\\":\\\"90012\\\"}"}
+
+]]></types:shape>
+    </types:type>
+  </types:catalog>
+  <types:enrichment select="#ce1933cc-cf34-4ecb-a623-f229e603fb3a">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="sampleslocationrecord"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#fd7d09ab-5397-4206-94b6-bcaf517e6fa4">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="sampleslocationrecord"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+  <types:enrichment select="#64a7a7eb-471c-48c8-8497-569c3517afcc">
+    <types:processor-declaration>
+      <types:input-event>
+        <types:message>
+          <types:payload type="sampleslocationrecord"/>
+        </types:message>
+      </types:input-event>
+    </types:processor-declaration>
+  </types:enrichment>
+</types:mule>

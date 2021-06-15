@@ -1,0 +1,13 @@
+#%RAML 1.0 Library
+usage:
+
+traits:
+  has_ipaddress : !include traits/hasipaddress.raml
+
+types:
+  heartbeat_response_type : !include types/heartbeatresponsedataType.raml
+  errorresponse_type : !include types/errordataType.raml
+  successresponse_type : !include types/responsedataType.raml
+  objectstoreresponse_type : !include types/objectstoreresponsedataType.raml
+  drivesyncresponse_type : !include types/driveSyncStatusdataType.raml
+

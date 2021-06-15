@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:google-drive="http://www.mulesoft.org/schema/mule/google-drive"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/google-drive http://www.mulesoft.org/schema/mule/google-drive/current/mule-google-drive.xsd">
+	<flow name="synchronizeDataFromDriveFlow" doc:id="78c29488-e870-4398-8d17-964323e56f04" >
+		<scheduler doc:name="Scheduler" doc:id="77f0a35d-a3d7-4d41-805b-b9495a9065a6" >
+			<scheduling-strategy >
+				<cron expression="0/1 0 21 ? * SUN *" timeZone="America/Los_Angeles"/>
+			</scheduling-strategy>
+		</scheduler>
+		<flow-ref doc:name="synchrozieLocationDatafromDrive" doc:id="0fe7af2a-b80b-42c9-a12f-d4bc392d71c0" name="synchrozieLocationDatafromDriveSubFlow"/>
+		<error-handler ref="customError_Handler" />
+		
+	</flow>
+	
+	<sub-flow name="inspectObjectStoreSubFlow" doc:id="febf9620-12d4-421e-b42c-bdce80bef242" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="6446b328-3846-404a-bc40-e0d36d38aeb5" message="Start of flow- inspectObjectStoreSubFlow "/>
+		<os:retrieve doc:name="Retrieve From ObjectStore" doc:id="ecd19136-9673-4f4c-9ea0-1b700cdf7dd5" key="LocationData" objectStore="LocationData_Object_Store" />
+		<ee:transform doc:name="Transform Message" doc:id="a8c0985a-9569-4112-9ac4-70053405a557">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log End Flow" doc:id="7def1a66-8115-4213-a8a0-1a0d4d67ea37" message="end of flow- inspectObjectStoreSubFlow "/>
+	</sub-flow>
+	<sub-flow name="synchrozieLocationDatafromDriveSubFlow" doc:id="5a672bd4-7ba8-4ec5-a607-18a8a396c444" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="21097203-95e5-425c-ac1f-268461f713e3" message="start of flow - synchrozieLocationDatafromDriveSubFlow"/>
+		<google-drive:get-files doc:name="Drive files list" doc:id="f566d22f-6553-4d16-8067-6d7aeead7fc1" config-ref="Google_Drive_Connector_Config" />
+		<ee:transform doc:name="Get fileId of Locationlist File" doc:id="369cbd80-f655-4a93-b8cc-e6777fed0dd9">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="fileId"><![CDATA[%dw 2.0
+output application/json
+---
+if(payload.name contains  "Mulesoft Assignment - Location CSV file.csv")
+(payload filter ((item, index) ->item.name=='Mulesoft Assignment - Location CSV file.csv' )).id[0] 
+else
+'file not present']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<google-drive:get-files-by-file-id doc:name="Get files by file id" doc:id="b076222c-faf6-46f9-af70-42213fb9c7f2" config-ref="Google_Drive_Connector_Config" fileId="#[vars.fileId]">
+			<google-drive:custom-query-params><![CDATA[#[output application/java
+---
+{
+	alt : "media"
+}]]]></google-drive:custom-query-params>
+		</google-drive:get-files-by-file-id>
+		<ee:transform doc:name="Transform Message" doc:id="a3c02bec-8ef4-43e0-8b76-daa21d618218">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="Locationdata"><![CDATA[%dw 2.0
+output application/json
+
+---
+payload]]></ee:set-variable>
+			
+</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="74cd7a1a-a0c9-457c-9b4f-9bc617350129">
+			<set-variable value="#[payload.State]" doc:name="Set Variable" doc:id="64a7a7eb-471c-48c8-8497-569c3517afcc" variableName="state" />
+			<http:request method="GET" doc:name="get all the zipcode of state" doc:id="ce1933cc-cf34-4ecb-a623-f229e603fb3a" config-ref="HTTP_Request_Configuration_Zipcodes" path="ZipCodesAPI.svc/1.0/GetAllZipCodes" target="zipcodeList">
+				<http:query-params><![CDATA[#[output application/java
+var statecode={
+"California" : "CA",
+"Michigan" : "MD",
+"Texas": "TX"
+} 
+---
+{
+	country : p('zipcode.country'),
+	state : statecode[(payload."State")],
+	key : p('secure::zipcode.apikey')
+}]]]></http:query-params>
+			</http:request>
+			<ee:transform doc:name="map zipcode list to state" doc:id="fd7d09ab-5397-4206-94b6-bcaf517e6fa4">
+				<ee:message>
+				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="Locationdata"><![CDATA[%dw 2.0
+output application/json
+---
+
+vars.Locationdata  map ((item, index) ->(item  update {
+          case ZipCode at ."Zip Code" if(item.State==vars.state) ->   vars.zipcodeList
+  }) )  ]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<os:store doc:name="Store LocationList in objectstore" doc:id="5853a301-00f7-42f9-b7e5-0dd067b9e184" objectStore="LocationData_Object_Store" key="LocationData">
+			<os:value><![CDATA[#[vars.Locationdata]]]></os:value>
+		</os:store>
+		<ee:transform doc:name="Set Sync Status" doc:id="67f9415f-ce19-44ba-b72a-fc1d705dc109" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	drivesyncstatus : 'successful'
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log End Flow" doc:id="dad36208-df26-43d4-8d78-586ab82b6b46" message="end of flow- inspectObjectStoreSubFlow " />
+	</sub-flow>
+	
+</mule>

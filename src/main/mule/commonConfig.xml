@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking"
+	xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:oauth="http://www.mulesoft.org/schema/mule/oauth"
+	xmlns:google-drive="http://www.mulesoft.org/schema/mule/google-drive"
+	xmlns:google-sheets="http://www.mulesoft.org/schema/mule/google-sheets"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/google-sheets http://www.mulesoft.org/schema/mule/google-sheets/current/mule-google-sheets.xsd
+http://www.mulesoft.org/schema/mule/google-drive http://www.mulesoft.org/schema/mule/google-drive/current/mule-google-drive.xsd
+http://www.mulesoft.org/schema/mule/oauth http://www.mulesoft.org/schema/mule/oauth/current/mule-oauth.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<http:request-config
+		name="HTTP_Request_configuration_Ip"
+		doc:name="HTTP Request configuration"
+		doc:id="2d4bd718-9360-41c2-a39d-558ee6942e14"
+		doc:description="Http requestor configuration for IP API
+">
+		<http:request-connection host="${ip.host}"
+			port="${ip.port}" />
+	</http:request-config>
+	<!-- <http:listener-config
+		name="HTTP_Listener_config_oAuth" doc:name="HTTP Listener config"
+		doc:id="79e5ff75-802e-497f-b7af-edf3368ec2f9" prettyPrint="false"
+		supportsTeamDrives="false" supportsAllDrives="false"
+		includeTeamDriveItems="false" includeItemsFromAllDrives="false"
+		config-ref="Google_Drive_Connector_Config" targetValue="#[payload]">
+		<http:listener-connection host="localhost"
+			port="8083" />
+	</http:listener-config> -->
+	<http:request-config
+		name="HTTP_Request_configuration_WeatherAPI"
+		doc:name="HTTP Request configuration"
+		doc:id="fb2261c3-72fb-4863-b8d2-40a745e6e085"
+		doc:description="Http Requestor configuration for weather API
+">
+		<http:request-connection
+			host="${weather.host}" port="${weather.port}" />
+	</http:request-config>
+	<google-drive:config
+		name="Google_Drive_Connector_Config"
+		doc:name="Google Drive Connector Config"
+		doc:id="c21b5ef0-5cad-4094-97b1-15c294d55fa0"
+		doc:description="Connection Configuration related to google drive connector" tracking:enable-default-events="false" >
+		<google-drive:oauth2-connection
+			baseUri="${google.baseuri}">
+			<google-drive:oauth-authorization-code
+				consumerKey="${secure::google.consumerkey}"
+				consumerSecret="${secure::google.consumersecret}"
+				scopes="https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata  https://www.googleapis.com/auth/drive.scripts"
+				authorizationUrl="${google.authorizationurl}"
+				accessTokenUrl="${google.accesstokenurl}" />
+			<google-drive:oauth-callback-config
+				listenerConfig="weatherapi-httpListenerConfig"
+				callbackPath="${google.callbackpath}"
+				authorizePath="${google.authorizepath}" externalCallbackUrl="https://weatherapimpl.us-e2.cloudhub.io/callback"/>
+		</google-drive:oauth2-connection>
+	</google-drive:config>
+	<http:request-config
+		name="HTTP_Request_Configuration_Zipcodes"
+		doc:name="HTTP Request configuration"
+		doc:id="84a65ca0-28a3-4b67-9e24-0a977551ef50"
+		doc:description="Http requestor Conguration to get list of zipcodes for a state">
+		<http:request-connection
+			host="${zipcodes.host}" port="${zipcodes.port}" protocol="HTTPS" />
+	</http:request-config>
+	<os:object-store name="LocationData_Object_Store"
+		doc:name="Object store" doc:id="b6a87cb0-043e-4f55-9b31-916b8d5c686d"
+		entryTtl="7" entryTtlUnit="DAYS" expirationInterval="7"
+		expirationIntervalUnit="DAYS"
+		doc:description="Objectstore configuration to store location list
+ " />
+	<configuration-properties
+		doc:name="Configuration properties"
+		doc:id="3977c25f-7d71-4dbc-9558-9a1eacdebc5a"
+		file="configuration.properties" doc:description="File with all required configration properties of the project
+"/>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="faff2297-bf52-4dde-b153-695335cc2fc1" file="configuration.properties" key="${encryption.key}" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<configuration doc:name="Configuration" doc:id="e2086d7f-61d3-405c-84ca-ea335969c9c5" defaultErrorHandler-ref="customError_Handler" doc:description="Golbal custom error handler
+"/>
+	<global-property doc:name="Global Property" doc:id="7c4bd608-edf4-4832-831e-37aed1a3b461" name="encryption.key" value="12345" doc:description="Encryption key to encrypt secure values"/>
+	<api-gateway:autodiscovery apiId="${autodiscovery.id}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="16e1e932-f752-4b29-a18e-8c7289a4c103" flowRef="weatherapi-main" />
+</mule>

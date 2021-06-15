@@ -1,0 +1,91 @@
+#%RAML 1.0
+title: weatherapi
+version: 1.0
+protocols: 
+  - HTTP
+documentation:
+  -
+    content: |
+      The weather API will display local weather for offices/locations of quickenLoans on an internal company site. 
+      This API would need to   take an IP address as an input and return weather information for the a matching location.
+    title: weather API
+
+uses: 
+ library : library.raml
+
+  
+
+/weatherinfo :
+  description: This is primary endpoint to get weather Information.
+  get:
+    is:
+      - library.has_ipaddress
+    responses:
+      200:
+        body:
+          application/json:
+            type: library.successresponse_type
+            example: !include examples/successresponseexample.raml
+      405:
+        body:
+          application/json:
+            type: library.errorresponse_type
+            example : !include examples/405response.raml
+      400:
+        body:
+          application/json:
+            type: library.errorresponse_type
+            example : !include examples/400Response.raml
+      500:
+        body:
+          application/json:
+            type: library.errorresponse_type
+            example: !include examples/500reponse.raml
+            
+  /syncdrive:
+    description: |
+      This endpoint provides capability to Manually sync LocationList in addition to predefined scehduler
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              type: library.drivesyncresponse_type
+              example: !include examples/drivesyncstatusexample.raml
+                
+        500:
+          body:
+            application/json:
+              type: library.errorresponse_type
+              example: !include examples/500reponse.raml
+            
+           
+      
+  /inspect :
+    description: This endpoint provides capability to inspect internally Maintained LocationList
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              type: library.objectstoreresponse_type
+              
+                
+            
+  /apiheartbeat:
+    description: endpoint to check availbility status of API
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              type: library.heartbeat_response_type 
+              example: !include examples/heartbeatresponseexample.raml
+        500:
+          body:
+            application/json:
+              type: library.errorresponse_type
+            
+                
+              
+    

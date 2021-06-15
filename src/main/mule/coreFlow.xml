@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<sub-flow name="coreSubFlow" doc:id="54e6feee-f4a1-4c51-be89-3d36d32a6ffe" >
+		<logger level="INFO" doc:name="Log Start Flow" doc:id="02df2917-574d-43a5-a878-14d93b946c96" message="Start of flow- coreSubFlow"/>
+		<set-variable value="#[attributes.queryParams.'ipaddress']" doc:name="Set Variable" doc:id="d5b807e2-46ac-4e42-9930-a771cbaf7458" variableName="ipaddress" />
+		<flow-ref doc:name="geoLocateIpSubFlow" doc:id="7955db01-9062-483f-aca1-bc1bbd9ab7cf" name="geoLocateIpSubFlow" />
+		<flow-ref doc:name="checkValidZipcodeSubFlow" doc:id="dc40b5c2-f64d-4490-8abc-0d51a0ed9fbd" name="checkValidZipcodeSubFlow" />
+		<flow-ref doc:name="getWeatherForZipcodeSubFlow" doc:id="1126ee1c-c4dd-4c13-ad56-bc7372f33524" name="getWeatherForZipcodeSubFlow" />
+		<logger level="INFO" doc:name="Log End Flow" doc:id="ac3aaef1-153f-4db9-8e07-a5c044bbe816" message="end of flow - coreSubFlow"/>
+	</sub-flow>
+</mule>
