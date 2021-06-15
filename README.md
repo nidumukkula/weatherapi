@@ -39,3 +39,6 @@ Following public APIs are utilized by weather API
 
 - Https endpoints: To enhnace security, API utilized keystore file to expose https endpoints.
 - Encryption : sensitive properties are encrypted using secure-property plugin
+
+### Object store
+- To maintain Location list (i.e synced from drive) ,API utilized Object store
